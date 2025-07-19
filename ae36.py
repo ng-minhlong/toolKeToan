@@ -16,7 +16,7 @@ def is_valid_stt(value):
 def process_sheet(df, sheet_name, ma_dai_ly_list=None):
     st.write(f"### Sheet: {sheet_name}")
 
-    required_columns = {'STT', 'Nguồn', 'Mã đại lý', 'Doanh thu thực thu'}
+    required_columns = {'STT', 'Mã đại lý', 'Doanh thu thực thu'}
     if not required_columns.issubset(df.columns):
         st.warning(f"Sheet '{sheet_name}' thiếu một trong các cột: {', '.join(required_columns)}")
         return None
@@ -26,8 +26,8 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
 
     # Làm sạch rồi chuyển đổi sang số (sử dụng kiểu tiếng Anh với dấu , là ngăn nhóm và . là thập phân)
     # Làm sạch
-    df_filtered['Nguồn'] = (
-        df_filtered['Nguồn']
+    df_filtered['Doanh thu thực thu'] = (
+        df_filtered['Doanh thu thực thu']
         .astype(str)
         .str.strip()
         .replace("-", "", regex=False)
@@ -36,7 +36,7 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
     )
 
     # Ép kiểu số
-    df_filtered['Nguồn'] = pd.to_numeric(df_filtered['Nguồn'], errors='coerce')
+    df_filtered['Doanh thu thực thu'] = pd.to_numeric(df_filtered['Doanh thu thực thu'], errors='coerce')
     df_filtered['Doanh thu thực thu'] = pd.to_numeric(df_filtered['Doanh thu thực thu'].astype(str).str.replace(',', ''), errors='coerce')
 
     # Xử lý dữ liệu theo mã đại lý nếu được cung cấp
@@ -45,24 +45,24 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
         for ma_dl in ma_dai_ly_list:
             df_dai_ly = df_filtered[df_filtered['Mã đại lý'] == ma_dl]
             if not df_dai_ly.empty:
-                nguon = df_dai_ly['Nguồn'].sum()
-                thuc_thu = df_dai_ly['Doanh thu thực thu'].sum()
-                ti_le = (thuc_thu / nguon * 100) if nguon != 0 else 0
+                tong_sheet = df_filtered['Doanh thu thực thu'].sum()  # Tổng doanh thu của cả sheet
+                thuc_thu = df_dai_ly['Doanh thu thực thu'].sum()     # Doanh thu của đại lý
+                ti_le = (thuc_thu / tong_sheet * 100) if tong_sheet != 0 else 0
                 dai_ly_data[ma_dl] = {
-                    'nguon': nguon,
+                    'nguon': tong_sheet,  # Lưu tổng doanh thu của sheet
                     'thuc_thu': thuc_thu,
                     'ti_le': ti_le
                 }
 
-    total = df_filtered['Nguồn'].sum()
+    total = df_filtered['Doanh thu thực thu'].sum()
     truong_phong = total * 0.01  # 1% doanh thu
     team_lead = total * 0.005    # 0.5% doanh thu
-    
-    st.write(f"Tổng 'Nguồn': **{total:,.0f}**")
+
+    st.write(f"Tổng 'Doanh thu thực thu': **{total:,.0f}**")
     st.write(f"Doanh thu chia Trưởng phòng (1%): **{truong_phong:,.0f}**")
     st.write(f"Doanh thu chia Team Lead (0.5%): **{team_lead:,.0f}**")
-    st.write("Xem trước dữ liệu cột 'STT' và 'Nguồn':")
-    st.dataframe(df_filtered[['STT', 'Nguồn']].head(300))
+    st.write("Xem trước dữ liệu cột 'STT' và 'Doanh thu thực thu':")
+    st.dataframe(df_filtered[['STT', 'Doanh thu thực thu']].head(300))
 
     return {
         'total': total,
@@ -115,7 +115,7 @@ if uploaded_file:
         if len(totals) == len(target_sheets):
             st.write("## 🔍 So sánh các loại doanh thu")
             df_compare = pd.DataFrame.from_dict(totals, orient='index')
-            df_compare.columns = ["Tổng Nguồn", "Doanh thu Trưởng phòng", "Doanh thu Team Lead"]
+            df_compare.columns = ["Tổng Doanh thu", "Doanh thu Trưởng phòng", "Doanh thu Team Lead"]
             st.dataframe(df_compare.style.format("{:,.0f}"))
 
         # Hiển thị thông tin và biểu đồ cho các đại lý
