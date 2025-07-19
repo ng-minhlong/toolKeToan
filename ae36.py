@@ -130,7 +130,8 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
 
 # Giao diện Streamlit
 st.title("Phân tích dữ liệu ")
-
+st.write("### 📊 Note: Cần làm sạch dữ liệu trước khi phân tích: Xóa dòng thừa ở đầu, để bảng lên trên cùng. Cần có đủ cột STT. Cần đủ các sheet Telco, tele HN, Tele HCM và đúng tên")
+st.warning("Có thể nhập mã đại lý 1 hoặc nhiều hoặc bỏ trống. Ví dụ nhập ```UYENNTT03, HUYENTT03, NGOCVB03```")
 # Input cho mã đại lý
 ma_dai_ly_input = st.text_input("Nhập các mã đại lý (phân cách bằng dấu phẩy)", "")
 ma_dai_ly_list = [ma.strip() for ma in ma_dai_ly_input.split(',')] if ma_dai_ly_input else []
