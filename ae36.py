@@ -57,10 +57,60 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
     total = df_filtered['Doanh thu thực thu'].sum()
     truong_phong = total * 0.01  # 1% doanh thu
     team_lead = total * 0.005    # 0.5% doanh thu
+    quy_van_hanh_cttdtdbh = total * 0.005  # Quỹ vận hành các chương trình thúc đẩy thi đua bán hàng, gắn kết = 0.5% doanh thu
 
     st.write(f"Tổng 'Doanh thu thực thu': **{total:,.0f}**")
     st.write(f"Doanh thu chia Trưởng phòng (1%): **{truong_phong:,.0f}**")
     st.write(f"Doanh thu chia Team Lead (0.5%): **{team_lead:,.0f}**")
+    st.write(f"Quỹ vận hành các chương trình thúc đẩy thi đua bán hàng, gắn kết (0.5%): **{quy_van_hanh_cttdtdbh:,.0f}**")
+        # Tính tổng của các dòng "Loại hình nghiệp vụ gốc" bắt đầu bằng "XO"
+    if 'Loại hình nghiệp vụ gốc' in df.columns:
+        df_filtered['Loại hình nghiệp vụ gốc'] = df['Loại hình nghiệp vụ gốc'].astype(str).str.strip()
+        xo_rows = df_filtered[df_filtered['Loại hình nghiệp vụ gốc'].str.startswith("XO")]
+        tong_xo = xo_rows['Doanh thu thực thu'].sum()
+        ti_le_15 = tong_xo * 0.015
+        st.write(f"Chi phí đánh giá rủi ro và cấp đơn( bắt đầu bằng 'XO'): **{ti_le_15:,.0f}**")
+    else:
+        st.warning("Không tìm thấy cột 'Loại hình nghiệp vụ gốc' để tính tổng mã XO.")
+
+        # Phân loại nghiệp vụ gốc XO / không XO và tính theo "Nguồn đơn vị"
+    if sheet_name == "tele HN":
+        if 'Loại hình nghiệp vụ gốc' in df.columns and 'Nguồn đơn vị' in df.columns and 'Mã đại lý' in df.columns:
+            df_temp = df.copy()
+            df_temp['Loại hình nghiệp vụ gốc'] = df_temp['Loại hình nghiệp vụ gốc'].astype(str).str.strip()
+            df_temp['Nguồn đơn vị'] = pd.to_numeric(
+                df_temp['Nguồn đơn vị'].astype(str).str.replace(",", "").str.strip(),
+                errors='coerce'
+            )
+            
+            # Gắn nhãn XO hoặc Non-XO
+            df_temp['Nhóm XO'] = df_temp['Loại hình nghiệp vụ gốc'].str.startswith("XO")
+            
+            # Áp dụng hệ số theo nhóm
+            df_temp['Giá trị quy đổi'] = df_temp.apply(
+                lambda row: row['Nguồn đơn vị'] * (0.965 if row['Nhóm XO'] else 0.98),
+                axis=1
+            )
+            
+            # Nhóm theo Mã đại lý và tính tổng
+            df_grouped = df_temp.groupby(['Mã đại lý', 'Nhóm XO'])['Giá trị quy đổi'].sum().reset_index()
+            
+            st.write("### ✅ Tổng giá trị quy đổi theo Mã đại lý:")
+            df_pivot = df_grouped.pivot_table(
+                index='Mã đại lý',
+                columns='Nhóm XO',
+                values='Giá trị quy đổi',
+                fill_value=0
+            ).rename(columns={True: "XO", False: "Không bắt đầu bằng XO"})
+            
+            df_pivot["Tổng"] = df_pivot["XO"] + df_pivot["Không bắt đầu bằng XO"]
+            st.dataframe(df_pivot.style.format("{:,.0f}"))
+        else:
+            st.warning("Không đủ cột để tính toán nhóm XO / Không XO trong sheet 'tele HN'")
+
+
+    
+    
     st.write("Xem trước dữ liệu cột 'STT' và 'Doanh thu thực thu':")
     st.dataframe(df_filtered[['STT', 'Doanh thu thực thu']].head(300))
 
@@ -79,7 +129,7 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
 
 
 # Giao diện Streamlit
-st.title("So sánh dữ liệu từ nhiều sheet Excel")
+st.title("Phân tích dữ liệu ")
 
 # Input cho mã đại lý
 ma_dai_ly_input = st.text_input("Nhập các mã đại lý (phân cách bằng dấu phẩy)", "")
