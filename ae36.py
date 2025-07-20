@@ -16,7 +16,7 @@ def is_valid_stt(value):
 def process_sheet(df, sheet_name, ma_dai_ly_list=None):
     st.write(f"### Sheet: {sheet_name}")
 
-    required_columns = {'STT', 'Mã đại lý', 'Doanh thu thực thu'}
+    required_columns = {'STT', 'Mã cán bộ quản lý', 'Doanh thu thực thu'}
     if not required_columns.issubset(df.columns):
         st.warning(f"Sheet '{sheet_name}' thiếu một trong các cột: {', '.join(required_columns)}")
         return None
@@ -43,7 +43,7 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
     dai_ly_data = {}
     if ma_dai_ly_list:
         for ma_dl in ma_dai_ly_list:
-            df_dai_ly = df_filtered[df_filtered['Mã đại lý'] == ma_dl]
+            df_dai_ly = df_filtered[df_filtered['Mã cán bộ quản lý'] == ma_dl]
             if not df_dai_ly.empty:
                 tong_sheet = df_filtered['Doanh thu thực thu'].sum()  # Tổng doanh thu của cả sheet
                 thuc_thu = df_dai_ly['Doanh thu thực thu'].sum()     # Doanh thu của đại lý
@@ -75,7 +75,7 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
 
         # Phân loại nghiệp vụ gốc XO / không XO và tính theo "Nguồn đơn vị"
     if sheet_name == "tele HN":
-        if 'Loại hình nghiệp vụ gốc' in df.columns and 'Nguồn đơn vị' in df.columns and 'Mã đại lý' in df.columns:
+        if 'Loại hình nghiệp vụ gốc' in df.columns and 'Nguồn đơn vị' in df.columns and 'Mã cán bộ quản lý' in df.columns:
             df_temp = df.copy()
             df_temp['Loại hình nghiệp vụ gốc'] = df_temp['Loại hình nghiệp vụ gốc'].astype(str).str.strip()
             df_temp['Nguồn đơn vị'] = pd.to_numeric(
@@ -92,12 +92,12 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
                 axis=1
             )
             
-            # Nhóm theo Mã đại lý và tính tổng
-            df_grouped = df_temp.groupby(['Mã đại lý', 'Nhóm XO'])['Giá trị quy đổi'].sum().reset_index()
+            # Nhóm theo Mã cán bộ quản lý và tính tổng
+            df_grouped = df_temp.groupby(['Mã cán bộ quản lý', 'Nhóm XO'])['Giá trị quy đổi'].sum().reset_index()
             
-            st.write("### ✅ Tổng giá trị quy đổi theo Mã đại lý:")
+            st.write("### ✅ Tổng giá trị quy đổi theo Mã cán bộ quản lý:")
             df_pivot = df_grouped.pivot_table(
-                index='Mã đại lý',
+                index='Mã cán bộ quản lý',
                 columns='Nhóm XO',
                 values='Giá trị quy đổi',
                 fill_value=0
@@ -131,7 +131,7 @@ def process_sheet(df, sheet_name, ma_dai_ly_list=None):
 # Giao diện Streamlit
 st.title("Phân tích dữ liệu ")
 st.write("### 📊 Note: Cần làm sạch dữ liệu trước khi phân tích: Xóa dòng thừa ở đầu, để bảng lên trên cùng. Cần có đủ cột STT. Cần đủ các sheet Telco, tele HN, Tele HCM và đúng tên")
-st.warning("Có thể nhập mã đại lý 1 hoặc nhiều hoặc bỏ trống. Ví dụ nhập ```UYENNTT03, HUYENTT03, NGOCVB03```")
+st.warning("Có thể nhập mã đại lý 1 hoặc nhiều hoặc bỏ trống. Ví dụ nhập ```UBUOIHTH03, HUYENTT03, LUONGNT, LYNT03, NGOCVB03, PHUONGNT03, THANNV03, THUPT03, THUYNTT03, THUYTT03, UYENNTT03, VANNT03, XUANLT03```")
 # Input cho mã đại lý
 ma_dai_ly_input = st.text_input("Nhập các mã đại lý (phân cách bằng dấu phẩy)", "")
 ma_dai_ly_list = [ma.strip() for ma in ma_dai_ly_input.split(',')] if ma_dai_ly_input else []
@@ -171,7 +171,7 @@ if uploaded_file:
 
         # Hiển thị thông tin và biểu đồ cho các đại lý
         if ma_dai_ly_list and ma_dai_ly_list[0]:  # Kiểm tra có mã đại lý được nhập không
-            st.write("## 📊 Phân tích theo Mã đại lý")
+            st.write("## 📊 Phân tích theo Mã cán bộ quản lý")
             
             # Tạo DataFrame cho việc so sánh
             dai_ly_comparison = []
@@ -180,22 +180,66 @@ if uploaded_file:
                     if sheet in all_dai_ly_data and ma_dl in all_dai_ly_data[sheet]:
                         data = all_dai_ly_data[sheet][ma_dl]
                         dai_ly_comparison.append({
-                            'Mã đại lý': ma_dl,
+                            'Mã cán bộ quản lý': ma_dl,
                             'Sheet': sheet,
-                            'Nguồn': data['nguon'],
+                            'Doanh thu thực thu chi nhánh': data['nguon'],
                             'Thực thu': data['thuc_thu'],
-                            'Tỷ lệ (%)': data['ti_le']
+                            'Tỷ lệ doanh thu thực thu (%)': data['ti_le']
                         })
             
             if dai_ly_comparison:
                 df_dai_ly = pd.DataFrame(dai_ly_comparison)
+
+                combined_data = []
+                if "tele HN" in xls:
+                    df_sheet = xls["tele HN"].copy()
+                    if 'STT' in df_sheet.columns and 'Mã cán bộ quản lý' in df_sheet.columns and 'Nguồn đơn vị' in df_sheet.columns:
+                        df_sheet = df_sheet[df_sheet['STT'].apply(is_valid_stt)].copy()
+                        df_sheet['Nguồn đơn vị'] = pd.to_numeric(
+                            df_sheet['Nguồn đơn vị'].astype(str).str.replace(",", "").str.strip(),
+                            errors='coerce'
+                        )
+                        combined_data.append(df_sheet[['Mã cán bộ quản lý', 'Nguồn đơn vị']])
+
+                df_all_sources = pd.concat(combined_data)
+
+                # Tính tổng "Nguồn đơn vị" theo "Mã cán bộ quản lý"
+                nguon_thuc_thu_map = df_all_sources.groupby('Mã cán bộ quản lý')['Nguồn đơn vị'].sum().to_dict()
+
+                # Gắn thêm cột "Nguồn thực thu" và "Tỷ lệ nguồn thực thu" vào df_dai_ly
+                # Tính tổng Nguồn đơn vị toàn bộ chi nhánh (sheet), gắn cho tất cả dòng
+                tong_nguon_don_vi_sheet = df_all_sources['Nguồn đơn vị'].sum()
+                df_dai_ly['Nguồn đơn vị'] = tong_nguon_don_vi_sheet
+
+
+                df_dai_ly['Nguồn thực thu'] = df_dai_ly['Mã cán bộ quản lý'].map(nguon_thuc_thu_map)
+                df_dai_ly['Tỷ lệ nguồn thực thu (%)'] = df_dai_ly.apply(
+                    lambda row: (row['Nguồn thực thu'] / row['Nguồn đơn vị'] * 100) if row['Nguồn đơn vị'] else 0,
+                    axis=1
+                )
+
+                # Thêm dòng tổng "Sum"
+                sum_row = {
+                    'Mã cán bộ quản lý': 'Tổng',
+                    'Sheet': None,
+                    'Doanh thu thực thu chi nhánh': df_dai_ly['Doanh thu thực thu chi nhánh'].sum(),
+                    'Thực thu': df_dai_ly['Thực thu'].sum(),
+                    'Tỷ lệ doanh thu thực thu (%)': None,
+                    'Nguồn đơn vị': tong_nguon_don_vi_sheet,
+                    'Nguồn thực thu': df_dai_ly['Nguồn thực thu'].sum(),
+                    'Tỷ lệ nguồn thực thu (%)': None
+                }
+                df_dai_ly = pd.concat([df_dai_ly, pd.DataFrame([sum_row])], ignore_index=True)
                 
                 # Hiển thị bảng số liệu
                 st.write("### Bảng số liệu chi tiết:")
                 st.dataframe(df_dai_ly.style.format({
-                    'Nguồn': '{:,.0f}',
+                    'Doanh thu thực thu chi nhánh': '{:,.0f}',
                     'Thực thu': '{:,.0f}',
-                    'Tỷ lệ (%)': '{:.2f}'
+                    'Tỷ lệ doanh thu thực thu (%)': '{:.2f}',
+                    'Nguồn đơn vị': '{:,.0f}',
+                    'Nguồn thực thu': '{:,.0f}',
+                    'Tỷ lệ nguồn thực thu (%)': '{:.2f}'
                 }))
                 
                 # Vẽ biểu đồ so sánh doanh thu thực thu
@@ -204,7 +248,7 @@ if uploaded_file:
                     df_dai_ly,
                     values='Thực thu',
                     index='Sheet',
-                    columns='Mã đại lý',
+                    columns='Mã cán bộ quản lý',
                     fill_value=0
                 )
                 st.bar_chart(chart_data)
