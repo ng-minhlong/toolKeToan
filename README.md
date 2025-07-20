@@ -1,10 +1,16 @@
 Live server: https://ae36py.streamlit.app/
 
+Screenshot
 <img width="1554" height="821" alt="image" src="https://github.com/user-attachments/assets/98c334d2-99a5-4cb6-9903-454c4b39779f" />
 
 
-I. pip install -r requirements.txt
-II. streamlit run ae36.py
+I. 
+bash
+``` pip install -r requirements.txt ```
+
+II. 
+bash
+``` streamlit run ae36.py ```
 
 Note 
 ```
